@@ -1,5 +1,6 @@
 package com.ysr.myrrr.httputils;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.google.gson.Gson;
@@ -10,8 +11,11 @@ import com.google.gson.TypeAdapterFactory;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonWriter;
+import com.ysr.myrrr.MainActivity;
 import com.ysr.myrrr.utils.APPNetWork;
+import com.ysr.myrrr.utils.LogUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
@@ -36,7 +40,7 @@ import rx.schedulers.Schedulers;
  */
 public class HttpRetrofit {
     public static OkHttpClient okHttpClient;
-
+    private Context context;
     public HttpRetrofit() {
         okHttpClient = getOkHttpClient();
     }
@@ -45,18 +49,23 @@ public class HttpRetrofit {
      * 设置调用OkHttpClient
      */
     public OkHttpClient getOkHttpClient() {
+         File file = new File(MyApplication.getInstance().getCacheDir().getAbsolutePath(), "download");
+        LogUtils.e("filepath", MyApplication.getInstance().getCacheDir().getAbsolutePath());
         return new OkHttpClient().newBuilder()
                 .addInterceptor(getHtttpLoggingInterceptor())
                 //缓存这两个都要设置才行
-                // .addNetworkInterceptor(getNetWorkInterceptor())
-                //.addInterceptor(getNetWorkInterceptor())
-                //  .addInterceptor(getInterceptor())
-                .cache(new Cache(MyApplication.getInstance().getCacheDir(), 10 * 1024 * 1024))
+                .addNetworkInterceptor(getNetWorkInterceptor())
+                .addInterceptor(getNetWorkInterceptor())
+                .addInterceptor(getInterceptor())
+            .cache(new Cache(MyApplication.getInstance().getCacheDir(), 10 * 1024 * 1024))
+
+                //     .cache(new Cache(file,1024 * 1024*100))
                 .retryOnConnectionFailure(true) //失败重连
                 .readTimeout(5, TimeUnit.SECONDS)
                 .connectTimeout(5, TimeUnit.SECONDS)
                 .build();
     }
+
     /**
      * 设置线程订阅转换
      *
@@ -69,7 +78,6 @@ public class HttpRetrofit {
             @Override
             public T call(T t) {
                 //在这里进行json转换并返回
-
                 return t;
             }
         })
@@ -94,12 +102,14 @@ public class HttpRetrofit {
         return new Retrofit.Builder()
                 .client(getOkHttpClient())
                 .baseUrl("http://c.m.163.com/")
-                .addConverterFactory(GsonConverterFactory.create(new Gson()))
+                // .addConverterFactory(GsonConverterFactory.create())
+                   .addConverterFactory(GsonConverterFactory.create(new Gson()))
                 .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
                 .build();
-     //   Gson myGson = new GsonBuilder().registerTypeAdapterFactory(new SafeTypeAdapterFactory().create());
+        //   Gson myGson = new GsonBuilder().registerTypeAdapterFactory(new SafeTypeAdapterFactory().create());
     }
-//    final static class SafeTypeAdapterFactory implements TypeAdapterFactory {
+
+    //    final static class SafeTypeAdapterFactory implements TypeAdapterFactory {
 //
 //        @Override
 //        public TypeAdapter create(Gson gson, final TypeToken type) {
@@ -146,33 +156,49 @@ public class HttpRetrofit {
         return new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
             @Override
             public void log(String message) {
-                Log.e("message", message);
+                LogUtils.e("message", message);
             }
         }).setLevel(HttpLoggingInterceptor.Level.BODY);
     }
 
     //设置连接器 设置缓存
     public Interceptor getNetWorkInterceptor() {
+
         return new Interceptor() {
             @Override
             public Response intercept(Chain chain) throws IOException {
+                LogUtils.e("APPNetWork","进入000");
                 Request request = chain.request();
+                LogUtils.e("APPNetWork","进入001");
+                if (!APPNetWork.isNetWork(MyApplication.getInstance())) {
+                    LogUtils.e("APPNetWork", "进入002");
+                    request = request.newBuilder()
+                            .cacheControl(CacheControl.FORCE_CACHE)
+                            .build();
+                } else {
+                    LogUtils.e("APPNetWork","进入003");
+                }
+
                 Response response = chain.proceed(request);
                 if (APPNetWork.isNetWork(MyApplication.getInstance())) {
-                    int maxAge = 0 * 60;
                     //有网络是设置缓存超时时间0小时
+                    int maxAge = 0 * 60;
                     response.newBuilder()
                             .header("Cache-Control", "public, max-age=" + maxAge)
                             // 清除头信息
                             .removeHeader("Pragma")
                             .build();
-                } else {
+                }
+                else {
+
+                    LogUtils.e("APPNetWork","进入else");
                     int maxStale = 60 * 60 * 24 * 7;
                     response.newBuilder()
                             .header("Cache-Control", "public, only-if-cached, max-stale=" + maxStale)
                             .removeHeader("Pragma")
                             .build();
                 }
+                LogUtils.e("APPNetWork","进入001");
                 return response;
             }
         };
@@ -186,7 +212,9 @@ public class HttpRetrofit {
                 Request request = chain.request();
                 if (!APPNetWork.isNetWork(MyApplication.getInstance())) {
                     request = request.newBuilder().cacheControl(CacheControl.FORCE_CACHE).build();
+                    LogUtils.e("APPNetWork","无网络连接");
                 }
+                LogUtils.e("APPNetWork","有网络连接");
                 return chain.proceed(request);
             }
         };
