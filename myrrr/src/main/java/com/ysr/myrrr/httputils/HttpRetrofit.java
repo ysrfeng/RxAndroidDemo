@@ -109,46 +109,6 @@ public class HttpRetrofit {
         //   Gson myGson = new GsonBuilder().registerTypeAdapterFactory(new SafeTypeAdapterFactory().create());
     }
 
-    //    final static class SafeTypeAdapterFactory implements TypeAdapterFactory {
-//
-//        @Override
-//        public TypeAdapter create(Gson gson, final TypeToken type) {
-//            final TypeAdapter delegate = gson.getDelegateAdapter(this,type);
-//            return new TypeAdapter() {
-//                @Override
-//                public void write(JsonWriter out, T value) throws IOException {
-//                    try {
-//                        delegate.write(out, value);
-//                    } catch (IOException e) {
-//                        delegate.write(out, null);
-//                    }
-//                }
-//
-//                @Override
-//                public T read(JsonReader in) throws IOException {
-//                    try {
-//                        return delegate.read(in);
-//                    } catch (IOException e) {
-//                        in.skipValue();
-//                        return null;
-//                    } catch (IllegalStateException e) {
-//                        in.skipValue();
-//                        return null;
-//                    } catch (JsonSyntaxException e) {
-//                        in.skipValue();
-//                        if(type.getType() instanceof Class){
-//                            try {
-//                                return (T) ((Class)type.getType()).newInstance();
-//                            } catch (Exception e1) {
-//
-//                            }
-//                        }
-//                        return null;
-//                    }
-//                }
-//            };
-//        }
-//    }
     /*
     日志打印
      */
@@ -156,7 +116,7 @@ public class HttpRetrofit {
         return new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
             @Override
             public void log(String message) {
-                LogUtils.e("message", message);
+                LogUtils.e("message---", message);
             }
         }).setLevel(HttpLoggingInterceptor.Level.BODY);
     }
@@ -170,7 +130,8 @@ public class HttpRetrofit {
                 LogUtils.e("APPNetWork","进入000");
                 Request request = chain.request();
                 LogUtils.e("APPNetWork","进入001");
-                if (!APPNetWork.isNetWork(MyApplication.getInstance())) {
+                if (APPNetWork.isNetWork(MyApplication.getInstance())) {
+                    //有网络
                     LogUtils.e("APPNetWork", "进入002");
                     request = request.newBuilder()
                             .cacheControl(CacheControl.FORCE_CACHE)
@@ -198,7 +159,7 @@ public class HttpRetrofit {
                             .removeHeader("Pragma")
                             .build();
                 }
-                LogUtils.e("APPNetWork","进入001");
+                LogUtils.e("APPNetWork","进入004");
                 return response;
             }
         };
@@ -212,9 +173,9 @@ public class HttpRetrofit {
                 Request request = chain.request();
                 if (!APPNetWork.isNetWork(MyApplication.getInstance())) {
                     request = request.newBuilder().cacheControl(CacheControl.FORCE_CACHE).build();
-                    LogUtils.e("APPNetWork","无网络连接");
+                    LogUtils.e("APPNetWork","进入005");
                 }
-                LogUtils.e("APPNetWork","有网络连接");
+                LogUtils.e("APPNetWork","进入006");
                 return chain.proceed(request);
             }
         };
