@@ -57,7 +57,7 @@ public class HttpRetrofit {
                 .addNetworkInterceptor(getNetWorkInterceptor())
                 .addInterceptor(getNetWorkInterceptor())
                 .addInterceptor(getInterceptor())
-            .cache(new Cache(MyApplication.getInstance().getCacheDir(), 10 * 1024 * 1024))
+                .cache(new Cache(MyApplication.getInstance().getCacheDir(), 10 * 1024 * 1024))
 
                 //     .cache(new Cache(file,1024 * 1024*100))
                 .retryOnConnectionFailure(true) //失败重连
